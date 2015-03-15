@@ -42,7 +42,7 @@ public class Cursor {
                             if (lostIDs.isEmpty()) {
                                 dedicatedIslandID = ++idCounter; //todo uncertain
                             } else {
-                                dedicatedIslandID = lostIDs.remove(0); //todo FIFO error
+                                dedicatedIslandID = lostIDs.remove(0); //todo FIFO, error
                             }
                         } else {
                             Integer minGrantedID = grantedForPoint.get(0); //todo 1 index island is out - MAX_VALUE
@@ -85,18 +85,8 @@ public class Cursor {
                         }
                         idsToRemove.clear();
 
-                        if (j.equals(streamStructure[i].length - 1) && i != (streamStructure.length - 1)) {
-                            String nextLineGrantedKey = String.valueOf(0) + '&' + String.valueOf(i + 1);
-                            ArrayList<Integer> grantedPointIDs = granted.get(nextLineGrantedKey);
-                            if (grantedPointIDs == null) {
-                                grantedPointIDs = new ArrayList<Integer>();
-                                grantedPointIDs.add(dedicatedIslandID);
-                                granted.put(nextLineGrantedKey, grantedPointIDs); //todo error
-                            } else {
-                                grantedPointIDs.add(dedicatedIslandID); //todo error
-                                granted.replace(nextLineGrantedKey, grantedPointIDs); //todo error
-                            }
-                        } else if (j < (streamStructure[i].length - 1)) {
+
+                        if (j < (streamStructure[i].length - 1)) {
                             String nextLineGrantedKey = String.valueOf(j + 1) + '&' + String.valueOf(i);
                             ArrayList<Integer> grantedPointIDs = granted.get(nextLineGrantedKey);
                             if (grantedPointIDs == null) {
