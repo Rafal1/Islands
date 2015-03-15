@@ -10,7 +10,7 @@ public class Cursor {
     private Boolean isWorking = false;
     public volatile Integer idCounter = -1;
     public volatile ArrayList<Integer> lostIDs = new ArrayList<Integer>();
-    public volatile ArrayList<Integer> IDsToRemove = new ArrayList<Integer>();
+    public volatile ArrayList<Integer> idsToRemove = new ArrayList<Integer>();
 
     //    private Set<Point> granted = Collections.newSetFromMap(new ConcurrentHashMap<Point, Boolean>());
 //    private ArrayList<Point> granted = new ArrayList<Point>(); //max size is 3
@@ -45,20 +45,27 @@ public class Cursor {
                                 dedicatedIslandID = lostIDs.remove(0); //todo FIFO error
                             }
                         } else {
-                            Integer minGrantedID = Integer.MAX_VALUE; //todo 1 index island is out - MAX_VALUE
-                            for(Integer k = 0; k < grantedForPoint.size(); k++) {
-
-                            }
-                            for (Integer pID : grantedForPoint) {
-
-                                if (minGrantedID > pID) {
-                                    minGrantedID = pID;
+                            Integer minGrantedID = grantedForPoint.get(0); //todo 1 index island is out - MAX_VALUE
+                            Integer indexOfMinGrantedID = 0;
+                            for (Integer k = 1; k < grantedForPoint.size(); k++) {
+                                Integer currentID = grantedForPoint.get(k);
+                                if (minGrantedID > currentID) {
+                                    minGrantedID = currentID;
+                                    idsToRemove.add(grantedForPoint.get(indexOfMinGrantedID));
+                                    indexOfMinGrantedID = k;
+                                } else if(currentID != minGrantedID) {
+                                    idsToRemove.add(currentID);
                                 }
-                            } //todo lostID++, remove old ID's
+                            }
                             dedicatedIslandID = minGrantedID; //todo
+
+//                            for(Integer rID : idsToRemove) {
+//                                removeID(rID, dedicatedIslandID);
+//                            }
+//                            idsToRemove.clear();
                         }
 
-                        Point tmpPoint = new Point(j.longValue(), i.longValue(), dedicatedIslandID);
+                        Point tmpPoint = new Point(j.longValue(), i.longValue());
                         ArrayList<Point> pointsOfIsland = Main.findedIslands.get(dedicatedIslandID);
                         if (pointsOfIsland != null) {
                             if (!pointsOfIsland.add(tmpPoint)) {
@@ -73,6 +80,10 @@ public class Cursor {
                             Main.findedIslands.put(dedicatedIslandID, newIslandPoints);
                         }
 
+                        for(Integer rID : idsToRemove) {
+                            removeID(rID, dedicatedIslandID);
+                        }
+                        idsToRemove.clear();
 
                         if (j.equals(streamStructure[i].length - 1) && i != (streamStructure.length - 1)) {
                             String nextLineGrantedKey = String.valueOf(0) + '&' + String.valueOf(i + 1);
@@ -148,4 +159,11 @@ public class Cursor {
         isWorking = false;
     }
 
+    private void removeID(Integer rID, Integer takeOverID) {
+        ArrayList<Point> rIDsPoints = Main.findedIslands.remove(rID);
+        ArrayList<Point> takeoverIDsPoints = Main.findedIslands.get(takeOverID);
+        takeoverIDsPoints.addAll(rIDsPoints);
+        lostIDs.add(rID);
+        Main.findedIslands.replace(takeOverID, takeoverIDsPoints);
+    }
 }
