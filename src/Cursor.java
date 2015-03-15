@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Cursor {
     // stream
     private Byte[][] streamStructure = null;
-    private Boolean isWorking = false;
     public volatile Integer idCounter = -1;
     public volatile ArrayList<Integer> lostIDs = new ArrayList<Integer>();
     public volatile ArrayList<Integer> idsToRemove = new ArrayList<Integer>();
@@ -21,7 +20,6 @@ public class Cursor {
     }
 
     public void start() {
-        isWorking = true;
         if (streamStructure == null) {
             return; //todo error noStructerEstablishedException
         }
@@ -53,7 +51,7 @@ public class Cursor {
                                     minGrantedID = currentID;
                                     idsToRemove.add(grantedForPoint.get(indexOfMinGrantedID));
                                     indexOfMinGrantedID = k;
-                                } else if(currentID != minGrantedID) {
+                                } else if (currentID != minGrantedID) {
                                     idsToRemove.add(currentID);
                                 }
                             }
@@ -80,7 +78,7 @@ public class Cursor {
                             Main.findedIslands.put(dedicatedIslandID, newIslandPoints);
                         }
 
-                        for(Integer rID : idsToRemove) {
+                        for (Integer rID : idsToRemove) {
                             removeID(rID, dedicatedIslandID);
                         }
                         idsToRemove.clear();
@@ -146,7 +144,7 @@ public class Cursor {
             }
         }
 
-        isWorking = false;
+        Date d = new Date();
     }
 
     private void removeID(Integer rID, Integer takeOverID) {
@@ -156,4 +154,5 @@ public class Cursor {
         lostIDs.add(rID);
         Main.findedIslands.replace(takeOverID, takeoverIDsPoints);
     }
+
 }
