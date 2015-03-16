@@ -56,11 +56,6 @@ public class Cursor {
                                 }
                             }
                             dedicatedIslandID = minGrantedID; //todo
-
-//                            for(Integer rID : idsToRemove) {
-//                                removeID(rID, dedicatedIslandID);
-//                            }
-//                            idsToRemove.clear();
                         }
 
                         Point tmpPoint = new Point(j.longValue(), i.longValue());
@@ -90,10 +85,10 @@ public class Cursor {
                             if (grantedPointIDs == null) {
                                 grantedPointIDs = new ArrayList<Integer>();
                                 grantedPointIDs.add(dedicatedIslandID);
-                                granted.put(nextLineGrantedKey, grantedPointIDs); //todo error
-                            } else {
-                                grantedPointIDs.add(dedicatedIslandID); //todo error
-                                granted.replace(nextLineGrantedKey, grantedPointIDs); //todo error
+                                granted.put(nextLineGrantedKey, grantedPointIDs);
+                            } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
+                                grantedPointIDs.add(dedicatedIslandID);
+                                granted.replace(nextLineGrantedKey, grantedPointIDs);
                             }
                         }
 
@@ -106,12 +101,12 @@ public class Cursor {
                                     grantedPointIDs = new ArrayList<Integer>();
                                     grantedPointIDs.add(dedicatedIslandID);
                                     granted.put(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                } else {
+                                } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
                                     grantedPointIDs.add(dedicatedIslandID); //todo error
                                     granted.replace(keyOfGrantingPoint, grantedPointIDs); //todo error
                                 }
                             }
-                        } else if (j == (streamStructure[i].length - 1)) {
+                        } else if (j == (streamStructure[i].length - 1) && i != (streamStructure.length - 1)) {
                             for (int m = 0; m < 2; m++) {
 //                                GrantedPoint grantedPoint = new GrantedPoint(Long.valueOf(j - m), Long.valueOf(i + 1));
                                 String keyOfGrantingPoint = String.valueOf(j - m) + '&' + String.valueOf(i + 1);
@@ -120,7 +115,7 @@ public class Cursor {
                                     grantedPointIDs = new ArrayList<Integer>();
                                     grantedPointIDs.add(dedicatedIslandID);
                                     granted.put(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                } else {
+                                } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
                                     grantedPointIDs.add(dedicatedIslandID); //todo error
                                     granted.replace(keyOfGrantingPoint, grantedPointIDs); //todo error
                                 }
@@ -133,10 +128,10 @@ public class Cursor {
                                 if (grantedPointIDs == null) {
                                     grantedPointIDs = new ArrayList<Integer>();
                                     grantedPointIDs.add(dedicatedIslandID);
-                                    granted.put(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                } else {
-                                    grantedPointIDs.add(dedicatedIslandID); //todo error
-                                    granted.replace(keyOfGrantingPoint, grantedPointIDs); //todo error
+                                    granted.put(keyOfGrantingPoint, grantedPointIDs);
+                                } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
+                                    grantedPointIDs.add(dedicatedIslandID);
+                                    granted.replace(keyOfGrantingPoint, grantedPointIDs);
                                 }
                             }
                         }
@@ -146,6 +141,7 @@ public class Cursor {
 
         Date d = new Date();
     }
+
 
     private void removeID(Integer rID, Integer takeOverID) {
         ArrayList<Point> rIDsPoints = Main.findedIslands.remove(rID);
