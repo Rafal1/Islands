@@ -1,28 +1,37 @@
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Rafał Zawadzki
  */
 public class Cursor {
-    // stream
     private Byte[][] streamStructure = null;
-    public volatile Integer idCounter = -1;
-    public volatile ArrayList<Integer> lostIDs = new ArrayList<Integer>();
-    public volatile ArrayList<Integer> idsToRemove = new ArrayList<Integer>();
+    public Integer idCounter = -1;
+    public LinkedList<Integer> lostIDs = new LinkedList<Integer>();
+    public ArrayList<Integer> idsToRemove = new ArrayList<Integer>();
+    private Integer INITIAL_HASHMAP_LENGTH_LIMIT = 125;
+    public Map<Integer, Integer> findedIslands;
+    private Map<String, ArrayList<Integer>> granted = new HashMap<String, ArrayList<Integer>>();
+    private Boolean isWorking = false;
+    private Float hashMapFillFactor = new Float(0.7);
 
-    //    private Set<Point> granted = Collections.newSetFromMap(new ConcurrentHashMap<Point, Boolean>());
-//    private ArrayList<Point> granted = new ArrayList<Point>(); //max size is 3
-    private static Map<String, ArrayList<Integer>> granted = new ConcurrentHashMap<String, ArrayList<Integer>>();
+    public Cursor(Integer initHashMapLength) {
+        INITIAL_HASHMAP_LENGTH_LIMIT = initHashMapLength;
+    }
 
-    public void setStramStructure(Byte[][] stramStructure) {
-        this.streamStructure = stramStructure;
+    public Cursor() {
     }
 
     public void start() {
         if (streamStructure == null) {
-            return; //todo error noStructerEstablishedException
+            System.out.println("Input data hasn't been loaded.");
+            return;
         }
+        if (isWorking) {
+            System.out.println("Algorithm has been started.");
+        }
+        isWorking = true;
+        findedIslands = new HashMap<>(INITIAL_HASHMAP_LENGTH_LIMIT, hashMapFillFactor); //todo
+
         for (Integer i = 0; i < streamStructure.length; i++) {
             for (Integer j = 0; j < streamStructure[i].length; j++) {
                 switch (streamStructure[i][j]) {
@@ -31,124 +40,162 @@ public class Cursor {
                         granted.remove(zeroGrantedPointKey);
                         continue;
                     case 1:
-                        Integer dedicatedIslandID;
-//                        GrantedPoint tmpGrantedPoint = new GrantedPoint(new Long(j.longValue()), new Long(i.longValue()));
+                        //geting id
                         String grantedPointKey = String.valueOf(j) + '&' + String.valueOf(i);
-//                        Boolean test = granted.containsKey(grantedPointKey);
-                        ArrayList<Integer> grantedForPoint = granted.remove(grantedPointKey);
-                        if (grantedForPoint == null || grantedForPoint.isEmpty()) {
-                            if (lostIDs.isEmpty()) {
-                                dedicatedIslandID = ++idCounter; //todo uncertain
-                            } else {
-                                dedicatedIslandID = lostIDs.remove(0); //todo FIFO, error
-                            }
-                        } else {
-                            Integer minGrantedID = grantedForPoint.get(0); //todo 1 index island is out - MAX_VALUE
-                            Integer indexOfMinGrantedID = 0;
-                            for (Integer k = 1; k < grantedForPoint.size(); k++) {
-                                Integer currentID = grantedForPoint.get(k);
-                                if (minGrantedID > currentID) {
-                                    minGrantedID = currentID;
-                                    idsToRemove.add(grantedForPoint.get(indexOfMinGrantedID));
-                                    indexOfMinGrantedID = k;
-                                } else if (currentID != minGrantedID) {
-                                    idsToRemove.add(currentID);
-                                }
-                            }
-                            dedicatedIslandID = minGrantedID; //todo
-                        }
+                        Integer dedicatedIslandID = getProperPointID(grantedPointKey);
 
-                        Point tmpPoint = new Point(j.longValue(), i.longValue());
-                        ArrayList<Point> pointsOfIsland = Main.findedIslands.get(dedicatedIslandID);
-                        if (pointsOfIsland != null) {
-                            if (!pointsOfIsland.add(tmpPoint)) {
-                                System.out.println("Not added Island part (to ArrayList structure)");
-                            }
-                            if (Main.findedIslands.replace(dedicatedIslandID, pointsOfIsland) == null) {
-                                System.out.println("Not replaced Island part in an ArrayList structure)");
-                            }
-                        } else {
-                            ArrayList<Point> newIslandPoints = new ArrayList<Point>();
-                            newIslandPoints.add(tmpPoint);
-                            Main.findedIslands.put(dedicatedIslandID, newIslandPoints);
-                        }
+                        //adding retriving point to island
+                        addPointToIsland(dedicatedIslandID);
 
-                        for (Integer rID : idsToRemove) {
-                            removeID(rID, dedicatedIslandID);
-                        }
-                        idsToRemove.clear();
+                        //granting neigbour points
+                        gratntOtherPoints(i, j, dedicatedIslandID);
 
-
-                        if (j < (streamStructure[i].length - 1)) {
-                            String nextLineGrantedKey = String.valueOf(j + 1) + '&' + String.valueOf(i);
-                            ArrayList<Integer> grantedPointIDs = granted.get(nextLineGrantedKey);
-                            if (grantedPointIDs == null) {
-                                grantedPointIDs = new ArrayList<Integer>();
-                                grantedPointIDs.add(dedicatedIslandID);
-                                granted.put(nextLineGrantedKey, grantedPointIDs);
-                            } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
-                                grantedPointIDs.add(dedicatedIslandID);
-                                granted.replace(nextLineGrantedKey, grantedPointIDs);
-                            }
-                        }
-
-                        if (j == 0) {
-                            for (int m = 0; m < 2; m++) {
-//                                GrantedPoint grantedPoint = new GrantedPoint(Long.valueOf(j + m), Long.valueOf(i + 1));
-                                String keyOfGrantingPoint = String.valueOf(j + m) + '&' + String.valueOf(i + 1);
-                                ArrayList<Integer> grantedPointIDs = granted.get(keyOfGrantingPoint);
-                                if (grantedPointIDs == null) {
-                                    grantedPointIDs = new ArrayList<Integer>();
-                                    grantedPointIDs.add(dedicatedIslandID);
-                                    granted.put(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
-                                    grantedPointIDs.add(dedicatedIslandID); //todo error
-                                    granted.replace(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                }
-                            }
-                        } else if (j == (streamStructure[i].length - 1) && i != (streamStructure.length - 1)) {
-                            for (int m = 0; m < 2; m++) {
-//                                GrantedPoint grantedPoint = new GrantedPoint(Long.valueOf(j - m), Long.valueOf(i + 1));
-                                String keyOfGrantingPoint = String.valueOf(j - m) + '&' + String.valueOf(i + 1);
-                                ArrayList<Integer> grantedPointIDs = granted.get(keyOfGrantingPoint);
-                                if (grantedPointIDs == null) {
-                                    grantedPointIDs = new ArrayList<Integer>();
-                                    grantedPointIDs.add(dedicatedIslandID);
-                                    granted.put(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
-                                    grantedPointIDs.add(dedicatedIslandID); //todo error
-                                    granted.replace(keyOfGrantingPoint, grantedPointIDs); //todo error
-                                }
-                            }
-                        } else if (i < (streamStructure.length - 1)) {
-                            for (int m = 0; m < 3; m++) {
-//                                GrantedPoint grantedPoint = new GrantedPoint(Long.valueOf(j - 1 + m), Long.valueOf(i + 1)); //todo out of border
-                                String keyOfGrantingPoint = String.valueOf(j - 1 + m) + '&' + String.valueOf(i + 1);
-                                ArrayList<Integer> grantedPointIDs = granted.get(keyOfGrantingPoint);
-                                if (grantedPointIDs == null) {
-                                    grantedPointIDs = new ArrayList<Integer>();
-                                    grantedPointIDs.add(dedicatedIslandID);
-                                    granted.put(keyOfGrantingPoint, grantedPointIDs);
-                                } else if (!grantedPointIDs.contains(dedicatedIslandID)) {
-                                    grantedPointIDs.add(dedicatedIslandID);
-                                    granted.replace(keyOfGrantingPoint, grantedPointIDs);
-                                }
-                            }
-                        }
+                        continue;
                 }
             }
         }
-
-        Date d = new Date();
+        isWorking = false;
     }
 
+    public Map<Integer, Integer> getResult() {
+        if (!isWorking) {
+            printStatus("ok");
+            return findedIslands;
+        }
+        printStatus("error");
+        return null;
+    }
+
+    private void printStatus(String s) {
+        switch (s) {
+            case "ok":
+                System.out.println("Task has been done correctly.");
+                break;
+            case "error":
+                System.out.println("Task is working or an error has occurred.");
+                break;
+        }
+    }
+
+    public void prepareForNextUsage() {
+        setStramStructure(null);
+        idCounter = -1;
+        lostIDs.clear();
+        idsToRemove.clear();
+        findedIslands.clear();
+        granted.clear();
+        isWorking = false;
+        setHashMapFillFactor(new Float(0.7));
+    }
+
+    private Integer getProperPointID(String pointKey) {
+        Integer properID;
+        ArrayList<Integer> grantedForPoint = granted.remove(pointKey);
+        if (grantedForPoint == null || grantedForPoint.isEmpty()) {
+            if (lostIDs.isEmpty()) {
+                properID = ++idCounter;
+            } else {
+                properID = lostIDs.poll();
+            }
+        } else {
+            Integer minGrantedID = grantedForPoint.get(0);
+            Integer indexOfMinGrantedID = 0;
+            for (Integer i = 1; i < grantedForPoint.size(); i++) {
+                Integer currentID = grantedForPoint.get(i);
+                if (minGrantedID > currentID) {
+                    minGrantedID = currentID;
+                    idsToRemove.add(grantedForPoint.get(indexOfMinGrantedID));
+                    indexOfMinGrantedID = i;
+                } else if (currentID != minGrantedID) {
+                    idsToRemove.add(currentID);
+                }
+            }
+            properID = minGrantedID;
+
+        }
+
+        for (Integer rID : idsToRemove) {
+            removeID(rID, properID);
+        }
+        idsToRemove.clear();
+
+        return properID;
+    }
 
     private void removeID(Integer rID, Integer takeOverID) {
-        ArrayList<Point> rIDsPoints = Main.findedIslands.remove(rID);
-        ArrayList<Point> takeoverIDsPoints = Main.findedIslands.get(takeOverID);
-        takeoverIDsPoints.addAll(rIDsPoints);
+        Integer rIDsPoints = findedIslands.remove(rID);
+        Integer takeoverIDsPoints = findedIslands.get(takeOverID);
+        Integer sum = rIDsPoints + takeoverIDsPoints;
         lostIDs.add(rID);
-        Main.findedIslands.replace(takeOverID, takeoverIDsPoints);
+        findedIslands.replace(takeOverID, sum);
+    }
+
+    private void addPointToIsland(Integer ID) {
+        Integer pointsOfIsland = findedIslands.get(ID);
+        if (pointsOfIsland != null) {
+            pointsOfIsland++;
+            if (findedIslands.replace(ID, pointsOfIsland) == null) {
+                System.out.println("Not replaced an Island part number)");
+            }
+        } else {
+            findedIslands.put(ID, 1);
+        }
+    }
+
+    private void gratntOtherPoints(Integer i, Integer j, Integer ID) {
+        String keyOfGrantingPoint;
+
+        //grant next point in the same row
+        if (j < (streamStructure[i].length - 1)) {
+            keyOfGrantingPoint = String.valueOf(j + 1) + '&' + String.valueOf(i);
+            addGrantToSpecificPoint(keyOfGrantingPoint, ID);
+        }
+
+        //grant points in lower row
+        if (j == 0 && i != (streamStructure.length - 1)) {
+            for (int m = 0; m < 2; m++) {
+                keyOfGrantingPoint = String.valueOf(j + m) + '&' + String.valueOf(i + 1);
+                addGrantToSpecificPoint(keyOfGrantingPoint, ID);
+            }
+        } else if (j == (streamStructure[i].length - 1) && i != (streamStructure.length - 1)) {
+            for (int m = 0; m < 2; m++) {
+                keyOfGrantingPoint = String.valueOf(j - m) + '&' + String.valueOf(i + 1);
+                addGrantToSpecificPoint(keyOfGrantingPoint, ID);
+            }
+        } else if (i < (streamStructure.length - 1)) {
+            for (int m = 0; m < 3; m++) {
+                keyOfGrantingPoint = String.valueOf(j - 1 + m) + '&' + String.valueOf(i + 1);
+                addGrantToSpecificPoint(keyOfGrantingPoint, ID);
+            }
+        }
+    }
+
+    private void addGrantToSpecificPoint(String key, Integer ID) {
+        ArrayList<Integer> grantedPointIDs = granted.get(key);
+        if (grantedPointIDs == null) {
+            grantedPointIDs = new ArrayList<>();
+            grantedPointIDs.add(ID);
+            granted.put(key, grantedPointIDs);
+        } else if (!grantedPointIDs.contains(ID)) {
+            grantedPointIDs.add(ID);
+            granted.replace(key, grantedPointIDs);
+        }
+    }
+
+    public Float getHashMapFillFactor() {
+        return hashMapFillFactor;
+    }
+
+    public void setHashMapFillFactor(Float hashMapFillFactor) {
+        if (isWorking) {
+            System.out.println("You can't change a fill factor, the default value is " + hashMapFillFactor);
+            return;
+        }
+        this.hashMapFillFactor = hashMapFillFactor;
+    }
+
+    public void setStramStructure(Byte[][] stramStructure) {
+        this.streamStructure = stramStructure;
     }
 
 }
