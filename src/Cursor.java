@@ -30,7 +30,7 @@ public class Cursor {
             System.out.println("Algorithm has been started.");
         }
         isWorking = true;
-        findedIslands = new HashMap<>(INITIAL_HASHMAP_LENGTH_LIMIT, hashMapFillFactor); //todo
+        findedIslands = new HashMap<>(INITIAL_HASHMAP_LENGTH_LIMIT, hashMapFillFactor);
 
         for (Integer i = 0; i < streamStructure.length; i++) {
             for (Integer j = 0; j < streamStructure[i].length; j++) {
@@ -92,6 +92,10 @@ public class Cursor {
         Integer properID;
         ArrayList<Integer> grantedForPoint = granted.remove(pointKey);
         if (grantedForPoint == null || grantedForPoint.isEmpty()) {
+            if (idCounter.equals(Integer.MAX_VALUE) && lostIDs.isEmpty()) {
+                System.out.println("Lack of empty IDs.");
+                return null;
+            }
             if (lostIDs.isEmpty()) {
                 properID = ++idCounter;
             } else {
